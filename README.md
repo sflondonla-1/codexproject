@@ -25,3 +25,7 @@ npm test
 The dashboard is a static site. In GitHub, open **Settings → Pages**, choose **Deploy from a branch**, then select **main** and **/ (root)** and save. No build step is required.
 
 The expected address after deployment is https://sflondonla-1.github.io/codexproject/.
+
+## AI productivity insights
+
+The AI panel includes period selection, suggestion acceptance, 7-day retention, first-pass CI rate, human review effort, AI-assisted tasks, token usage, API spend, task rework, and cost per completed task. Expand the metric definitions in the panel for denominators and cohort assumptions. All AI metrics are illustrative fixtures in `src/ai-metrics.js`; no providers are connected and no productivity or cost savings are claimed. The period selector updates only this panel.

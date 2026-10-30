@@ -1,3 +1,4 @@
+import { aiSamples, summarizeAI } from './ai-metrics.js';
 const $ = (s) => document.querySelector(s);
 const read = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const save = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { toast('Storage unavailable. Changes will last for this visit.'); } };
@@ -42,4 +43,23 @@ $('#start-timer').addEventListener('click',()=>{if(remaining===0)remaining=minut
 $('#reset-timer').addEventListener('click',()=>{running=false;remaining=minutes*60;drawTimer();});
 for(const button of document.querySelectorAll('[data-minutes]'))button.addEventListener('click',()=>{minutes=Number(button.dataset.minutes);running=false;remaining=minutes*60;document.querySelectorAll('[data-minutes]').forEach(b=>b.classList.toggle('selected',b===button));drawTimer();});
 setInterval(()=>{if(!running)return;remaining=Math.max(0,Math.ceil((deadline-Date.now())/1000));if(!remaining){running=false;if(minutes===25){sessions[dayKey()]=(sessions[dayKey()]||0)+1;save('devspace-sessions',sessions);updateSessions();}toast(minutes===25?'Focus session complete. Take a well-earned break!':'Break complete. Ready for your next session?');}drawTimer();},250);updateSessions();
-for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b===button));const view=button.dataset.view;$('#page-name').textContent={overview:'Overview',tasks:'My tasks',focus:'Focus time',activity:'Activity'}[view];if(view==='overview')window.scrollTo({top:0,behavior:'smooth'});else $('#'+view+'-section').scrollIntoView({behavior:'smooth',block:'start'});});
+for(const button of document.querySelectorAll('[data-view]'))button.addEventListener('click',()=>{document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b===button));const view=button.dataset.view;$('#page-name').textContent={overview:'Overview',tasks:'My tasks',focus:'Focus time',activity:'Activity',ai:'AI productivity'}[view];if(view==='overview')window.scrollTo({top:0,behavior:'smooth'});else $('#'+view+'-section').scrollIntoView({behavior:'smooth',block:'start'});});
+
+const dollars = value => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(value);
+function renderAI() {
+  const data=aiSamples[$('#ai-period').value];
+  const stats=summarizeAI(data);
+  const metrics=[
+    ['Suggestion acceptance', stats.acceptance+'%', `${data.accepted} of ${data.suggestions} suggestions accepted`],
+    ['7-day code retention',stats.retention+'%',`${data.retained} of ${data.accepted} accepted suggestions retained`],
+    ['First-pass CI checks',stats.firstPass+'%',`${data.firstPass} of ${data.reviewed} AI-assisted PRs`],
+    ['Human review / PR',stats.reviewAverage.toFixed(0)+' min',`${data.reviewMinutes} review minutes across ${data.reviewed} PRs`],
+    ['AI-assisted tasks',String(data.tasks),'Completed tasks with recorded AI assistance'],
+    ['API spend',dollars(data.cost),`${(data.tokens/1000000).toFixed(2)}M input + output tokens`]
+  ];
+  const root=$('#ai-metrics');root.replaceChildren();
+  for(const [label,value,note] of metrics){const card=document.createElement('article');card.className='ai-metric';const name=document.createElement('h4');name.textContent=label;const number=document.createElement('strong');number.textContent=value;const description=document.createElement('p');description.textContent=note;card.append(name,number,description);root.append(card);}
+  const table=$('#ai-tools');table.replaceChildren();for(const tool of data.tools){const row=document.createElement('tr');for(const value of [tool.name,tool.tasks,dollars(tool.cost)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}table.append(row);}
+  const quality=$('#ai-quality-metrics');quality.replaceChildren();for(const [name,value] of [['7-day task rework',`${stats.rework}% (${data.reworked}/${data.tasks} tasks)`],['API cost per completed task',dollars(stats.costPerTask)]]){const line=document.createElement('div');const label=document.createElement('span');label.textContent=name;const number=document.createElement('strong');number.textContent=value;line.append(label,number);quality.append(line);}
+}
+$('#ai-period').addEventListener('change',renderAI);renderAI();
